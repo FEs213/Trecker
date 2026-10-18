@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/format.dart';
-import '../data/demo_data.dart';
+import '../data/models.dart';
 import '../theme/app_text.dart';
 import 'icon_badge.dart';
 
@@ -9,7 +9,7 @@ import 'icon_badge.dart';
 class ExpenseTile extends StatelessWidget {
   const ExpenseTile({super.key, required this.expense, this.onTap});
 
-  final DemoExpense expense;
+  final Expense expense;
   final VoidCallback? onTap;
 
   @override
@@ -26,7 +26,12 @@ class ExpenseTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(expense.title, style: AppText.bodyMedium),
+                  Text(
+                    expense.title,
+                    style: AppText.bodyMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   const SizedBox(height: 2),
                   Text(
                     '${formatDayMonth(expense.date)} · ${expense.method}',
@@ -35,7 +40,8 @@ class ExpenseTile extends StatelessWidget {
                 ],
               ),
             ),
-            Text(formatRub(expense.amount), style: AppText.bodyMedium),
+            const SizedBox(width: 8),
+            Text(formatKopecks(expense.amountKopecks), style: AppText.bodyMedium),
           ],
         ),
       ),

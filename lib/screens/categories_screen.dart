@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../data/demo_data.dart';
+import '../data/models.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/velvet_page.dart';
 
-/// Вкладка «Категории»: стандартные категории (свои — следующий шаг).
+/// Вкладка «Категории»: стандартные категории (свои - следующий шаг).
 class CategoriesScreen extends StatelessWidget {
   const CategoriesScreen({super.key});
 
@@ -22,11 +22,11 @@ class CategoriesScreen extends StatelessWidget {
       ),
       children: [
         Text(
-          'Стандартные · ${demoCategories.length} категорий',
+          'Стандартные · ${kCategories.length} категорий',
           style: AppText.caption,
         ),
         const SizedBox(height: 8),
-        for (final category in demoCategories)
+        for (final category in kCategories)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Row(

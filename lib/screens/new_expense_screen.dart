@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/format.dart';
-import '../data/demo_data.dart';
+import '../data/expense_repository.dart';
+import '../data/models.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text.dart';
 import '../widgets/primary_button.dart';
@@ -10,7 +12,7 @@ import '../widgets/velvet_choice_chip.dart';
 import '../widgets/velvet_page.dart';
 import '../widgets/velvet_text_field.dart';
 
-/// Экран «Новый расход». Форма рабочая, но сохранение пока демонстрационное.
+/// Экран «Новый расход»: проверяет форму и сохраняет расход в хранилище.
 class NewExpenseScreen extends StatefulWidget {
   const NewExpenseScreen({super.key});
 
@@ -19,8 +21,6 @@ class NewExpenseScreen extends StatefulWidget {
 }
 
 class _NewExpenseScreenState extends State<NewExpenseScreen> {
-  static const _methods = ['Карта', 'Наличные', 'QR-код', 'Иной'];
-
   final _formKey = GlobalKey<FormState>();
   final _amount = TextEditingController();
   final _category = TextEditingController();
@@ -30,7 +30,8 @@ class _NewExpenseScreenState extends State<NewExpenseScreen> {
   final _trip = TextEditingController();
 
   DateTime _dateValue = DateTime.now();
-  String _method = _methods.first;
+  String _method = kPaymentMethods.first;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -71,7 +72,7 @@ class _NewExpenseScreenState extends State<NewExpenseScreen> {
         child: ListView(
           shrinkWrap: true,
           children: [
-            for (final category in demoCategories)
+            for (final category in kCategories)
               ListTile(
                 leading: Icon(category.icon),
                 title: Text(category.name),
@@ -86,21 +87,44 @@ class _NewExpenseScreenState extends State<NewExpenseScreen> {
     }
   }
 
-  void _save() {
+  Future<void> _save() async {
+    if (_saving) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Расход проверен. Сохранение подключим на следующем шаге'),
-      ),
+
+    final kopecks = parseAmountToKopecks(_amount.text);
+    if (kopecks == null) return;
+
+    final repository = ExpenseScope.read(context);
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    setState(() => _saving = true);
+
+    final expense = Expense(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      amountKopecks: kopecks,
+      categoryName: _category.text,
+      date: DateTime(_dateValue.year, _dateValue.month, _dateValue.day),
+      method: _method,
+      payee: _payee.text.trim(),
+      comment: _comment.text.trim(),
+      trip: _trip.text.trim(),
     );
-    Navigator.of(context).pop();
+
+    await repository.add(expense);
+
+    navigator.pop();
+    messenger.showSnackBar(const SnackBar(content: Text('Расход добавлен')));
   }
 
   @override
   Widget build(BuildContext context) {
     return VelvetPage(
       title: 'Новый расход',
-      bottom: PrimaryButton(label: 'Сохранить', onPressed: _save),
+      bottom: PrimaryButton(
+        label: 'Сохранить',
+        onPressed: _saving ? null : _save,
+      ),
       children: [
         Form(
           key: _formKey,
@@ -113,14 +137,14 @@ class _NewExpenseScreenState extends State<NewExpenseScreen> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                validator: (value) {
-                  final parsed = double.tryParse(
-                    (value ?? '').replaceAll(',', '.').trim(),
-                  );
-                  return (parsed == null || parsed <= 0)
-                      ? 'Введите сумму больше нуля'
-                      : null;
-                },
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                    RegExp(r'^\d{0,9}([.,]\d{0,2})?'),
+                  ),
+                ],
+                validator: (value) => parseAmountToKopecks(value ?? '') == null
+                    ? 'Введите сумму больше нуля'
+                    : null,
               ),
               const SizedBox(height: 12),
               Row(
@@ -161,7 +185,7 @@ class _NewExpenseScreenState extends State<NewExpenseScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  for (final method in _methods)
+                  for (final method in kPaymentMethods)
                     VelvetChoiceChip(
                       label: method,
                       selected: method == _method,
