@@ -12,15 +12,19 @@ import '../widgets/velvet_choice_chip.dart';
 import '../widgets/velvet_page.dart';
 import '../widgets/velvet_text_field.dart';
 
-/// Экран «Новый расход»: проверяет форму и сохраняет расход в хранилище.
-class NewExpenseScreen extends StatefulWidget {
-  const NewExpenseScreen({super.key});
+/// Форма расхода. Без [expense] - «Новый расход», с ним - «Изменить расход».
+class ExpenseFormScreen extends StatefulWidget {
+  const ExpenseFormScreen({super.key, this.expense});
+
+  final Expense? expense;
 
   @override
-  State<NewExpenseScreen> createState() => _NewExpenseScreenState();
+  State<ExpenseFormScreen> createState() => _ExpenseFormScreenState();
 }
 
-class _NewExpenseScreenState extends State<NewExpenseScreen> {
+class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
+  bool get _isEditing => widget.expense != null;
+
   final _formKey = GlobalKey<FormState>();
   final _amount = TextEditingController();
   final _category = TextEditingController();
@@ -28,6 +32,7 @@ class _NewExpenseScreenState extends State<NewExpenseScreen> {
   final _payee = TextEditingController();
   final _comment = TextEditingController();
   final _trip = TextEditingController();
+  String _tripId = '';
 
   DateTime _dateValue = DateTime.now();
   String _method = kPaymentMethods.first;
@@ -36,7 +41,23 @@ class _NewExpenseScreenState extends State<NewExpenseScreen> {
   @override
   void initState() {
     super.initState();
+    final expense = widget.expense;
+    if (expense != null) {
+      _amount.text = kopecksToInput(expense.amountKopecks);
+      _category.text = expense.categoryName;
+      _dateValue = expense.date;
+      _payee.text = expense.payee;
+      _comment.text = expense.comment;
+      _tripId = expense.tripId;
+      _method = expense.method;
+    }
     _date.text = formatDate(_dateValue);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _trip.text = ExpenseScope.of(context).tripById(_tripId)?.name ?? '';
   }
 
   @override
@@ -66,15 +87,17 @@ class _NewExpenseScreenState extends State<NewExpenseScreen> {
   }
 
   Future<void> _pickCategory() async {
+    final categories = ExpenseScope.read(context).allCategories;
     final picked = await showModalBottomSheet<String>(
+      isScrollControlled: true,
       context: context,
       builder: (sheetContext) => SafeArea(
         child: ListView(
           shrinkWrap: true,
           children: [
-            for (final category in kCategories)
+            for (final category in categories)
               ListTile(
-                leading: Icon(category.icon),
+                leading: Icon(category.icon, color: category.color),
                 title: Text(category.name),
                 onTap: () => Navigator.of(sheetContext).pop(category.name),
               ),
@@ -84,6 +107,47 @@ class _NewExpenseScreenState extends State<NewExpenseScreen> {
     );
     if (picked != null) {
       setState(() => _category.text = picked);
+    }
+  }
+
+  Future<void> _pickTrip() async {
+    final trips = ExpenseScope.read(context).trips;
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.block),
+              title: const Text('Без командировки'),
+              onTap: () => Navigator.of(sheetContext).pop(''),
+            ),
+            for (final trip in trips)
+              ListTile(
+                leading: const Icon(Icons.work_outline),
+                title: Text(trip.name),
+                subtitle: Text(formatDateRange(trip.start, trip.end)),
+                onTap: () => Navigator.of(sheetContext).pop(trip.id),
+              ),
+            if (trips.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(24, 8, 24, 16),
+                child: Text(
+                  'Поездок пока нет. Создайте её на вкладке «Поездки».',
+                  style: AppText.caption,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked != null) {
+      final name = ExpenseScope.read(context).tripById(picked)?.name ?? '';
+      setState(() {
+        _tripId = picked;
+        _trip.text = name;
+      });
     }
   }
 
@@ -101,26 +165,35 @@ class _NewExpenseScreenState extends State<NewExpenseScreen> {
     setState(() => _saving = true);
 
     final expense = Expense(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      id: widget.expense?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
       amountKopecks: kopecks,
       categoryName: _category.text,
       date: DateTime(_dateValue.year, _dateValue.month, _dateValue.day),
       method: _method,
       payee: _payee.text.trim(),
       comment: _comment.text.trim(),
-      trip: _trip.text.trim(),
+      tripId: _tripId,
     );
 
-    await repository.add(expense);
+    final editing = _isEditing;
+    if (editing) {
+      await repository.update(expense);
+    } else {
+      await repository.add(expense);
+    }
 
     navigator.pop();
-    messenger.showSnackBar(const SnackBar(content: Text('Расход добавлен')));
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(editing ? 'Изменения сохранены' : 'Расход добавлен'),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return VelvetPage(
-      title: 'Новый расход',
+      title: _isEditing ? 'Изменить расход' : 'Новый расход',
       bottom: PrimaryButton(
         label: 'Сохранить',
         onPressed: _saving ? null : _save,
@@ -196,7 +269,11 @@ class _NewExpenseScreenState extends State<NewExpenseScreen> {
               const SizedBox(height: 12),
               VelvetTextField(
                 label: 'Командировка · необязательно',
+                hint: 'Без командировки',
                 controller: _trip,
+                readOnly: true,
+                onTap: _pickTrip,
+                suffixIcon: Icons.arrow_drop_down,
               ),
               const SizedBox(height: 16),
               VelvetCard(

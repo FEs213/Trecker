@@ -35,7 +35,7 @@ class TratiApp extends StatelessWidget {
     return ExpenseScope(
       repository: repository,
       child: MaterialApp(
-        title: 'Траты',
+        title: 'Trecker',
         debugShowCheckedModeBanner: false,
         theme: buildVelvetTheme(),
         themeMode: ThemeMode.dark,

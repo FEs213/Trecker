@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/format.dart';
+import '../data/expense_repository.dart';
 import '../data/models.dart';
 import '../theme/app_text.dart';
 import 'icon_badge.dart';
@@ -14,13 +15,15 @@ class ExpenseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final category =
+        ExpenseScope.of(context).categoryByName(expense.categoryName);
     return InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
           children: [
-            IconBadge(icon: expense.category.icon),
+            IconBadge(icon: category.icon, color: category.color),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
