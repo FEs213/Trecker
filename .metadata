@@ -4,8 +4,8 @@
 # This file should be version controlled and should not be manually edited.
 
 version:
-  revision: "abaf9c523780a608bd46686fd5e53740a07077f8"
-  channel: "stable"
+  revision: "a0d3b222d7f9dd055cab6173011a147ac7e0c873"
+  channel: "flutter-aurora-3.41.4"
 
 project_type: app
 
@@ -13,14 +13,11 @@ project_type: app
 migration:
   platforms:
     - platform: root
-      create_revision: abaf9c523780a608bd46686fd5e53740a07077f8
-      base_revision: abaf9c523780a608bd46686fd5e53740a07077f8
-    - platform: android
-      create_revision: abaf9c523780a608bd46686fd5e53740a07077f8
-      base_revision: abaf9c523780a608bd46686fd5e53740a07077f8
-    - platform: web
-      create_revision: abaf9c523780a608bd46686fd5e53740a07077f8
-      base_revision: abaf9c523780a608bd46686fd5e53740a07077f8
+      create_revision: a0d3b222d7f9dd055cab6173011a147ac7e0c873
+      base_revision: a0d3b222d7f9dd055cab6173011a147ac7e0c873
+    - platform: aurora
+      create_revision: a0d3b222d7f9dd055cab6173011a147ac7e0c873
+      base_revision: a0d3b222d7f9dd055cab6173011a147ac7e0c873
 
   # User provided section
 
